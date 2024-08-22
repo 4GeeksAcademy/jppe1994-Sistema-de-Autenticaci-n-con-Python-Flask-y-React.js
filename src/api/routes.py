@@ -6,93 +6,68 @@ from api.models import db, User
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
+
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
+CORS(api)
 
-from flask_jwt_extended import jwt_required, create_access_token, JWTManager, get_jwt_identity
-
-# from models import Person
-
-ENV = "development" if os.getenv("FLASK_DEBUG") == "1" else "production"
-static_file_dir = os.path.join(os.path.dirname(
-    os.path.realpath(__file__)), '../public/')
-app = Flask(__name__)
-app.url_map.strict_slashes = False
-jwt = JWTManager(app)
-CORS(app)
-
-# database condiguration
-db_url = os.getenv("DATABASE_URL")
-if db_url is not None:
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace(
-        "postgres://", "postgresql://")
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:////tmp/test.db"
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-MIGRATE = Migrate(app, db, compare_type=True)
-db.init_app(app)
-
-
-# any other endpoint will try to serve it like a static file
-
-
-@ap.route('/<path:path>', methods=['GET'])
-def serve_any_other_file(path):
-    if not os.path.isfile(os.path.join(static_file_dir, path)):
-        path = 'index.html'
-    response = send_from_directory(static_file_dir, path)
-    response.cache_control.max_age = 0  # avoid cache memory
-    return response
 
 @api.route('/hello', methods=['POST', 'GET'])
 def handle_hello():
 
     response_body = {
-        "message": "Hello! I'm a message that came from the backend, check the network tab on the google inspector and you will see the GET request"
+        "message": "ESte servicio esta en abck en python"
     }
 
     return jsonify(response_body), 200
 
-
-@api.route('/users', methods=['GET'])
-def get_users():
-    return [user.serialize() for user in User.query.all()], 200
-
-@api.route('/users', methods=["POST"]) 
-def create_user():
-    data = request.json
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-
-    if not username or not email or not password: return jsonify({'Error': 'There are missing fields.'}), 400
-
-    existing_user_email = User.query.filter_by(email=email).first()
-    if existing_user_email: return jsonify({'Error': 'Email is already in use.'}), 400
-
-    new_user = User(username=username, email=email, password=password)
-
-    db.session.add(new_user)
-    db.session.commit()
-
-    return jsonify(new_user.serialize()), 201
-
-@api.route('/login', methods=['POST'])
+@api.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    email = data.get('email')
-    password = data.get('password')
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
 
-    user = User.query.filter_by(email=email).first()
-    if not user or user.password != password: return jsonify({ 'Error': 'Invalid email or password.' }), 401
+    user= User.query.filter_by(email=email).first()
+    print(user)
+
+    if user == None:
+        return jsonify({"msg": "could not find email"}), 401
+    if password != user.password:
+        return jsonify({"msg": "Bad username or password"}), 401
 
     access_token = create_access_token(identity=email)
-    return jsonify(access_token=access_token), 200
+    return jsonify(access_token=access_token)
 
-@api.route("/validate-token", methods=["GET"])
+
+@api.route("/signup", methods=["POST"])
+def signup():
+    body = request.get_json()
+    print(body)
+
+    user= User.query.filter_by(email=body["email"]).first()
+    print(user)
+
+    if user == None:
+        user=User(email=body["email"], password = body["password"], is_active = True)
+        db.session.add(user)
+        db.session.commit()
+        response_body = {
+            "msg": "Usuario creado"
+        }
+        return jsonify(response_body), 200
+    else:
+        return jsonify({"msg": "Ya se encuentra un usuario creado con este correo"}), 401
+
+
+# Protect a route with jwt_required, which will kick out requests
+# without a valid JWT present.
+@api.route("/protected", methods=["GET"])
 @jwt_required()
-def validate():
+def protected():
+    # Access the identity of the current user with get_jwt_identity
     current_user = get_jwt_identity()
-    return jsonify(valid=bool(current_user)), 200
+    return jsonify(logged_in_as=current_user), 200

@@ -1,35 +1,31 @@
-import React, { useContext } from "react";
-import { Context } from "../store/appContext";
+import React, { useState, useContext } from "react";
 import { Link } from "react-router-dom";
+import { Context } from "../store/appContext";
+import { useNavigate } from "react-router-dom"
 
 export const Navbar = () => {
-	const { store, actions } = useContext(Context);
+	const {store, actions} = useContext(Context)
+	const navigate = useNavigate()
 
-	const handleLogout = () => {
-		actions.logout(); 
-	};
-
+	function handleLogout(){
+		actions.logout()
+		navigate('/')
+	}
 	return (
 		<nav className="navbar navbar-light bg-light">
-			<div className="container">
-				<Link to="/">
-					<span className="navbar-brand mb-0 h1">React Boilerplate</span>
-				</Link>
-				<div className="ml-auto">
-					{!store.access_token && 
-					<Link to="/signup">
-						<button className="btn btn-primary">Sign Up</button>
-					</Link>}
-					<Link to="/">
-						<button
-						className="btn btn-primary"
-						onClick={store.access_token ? handleLogout : null} 
-						>
-						{store.access_token ? "Log out" : "Log in"}
-						</button>
-					</Link>
-				</div>
-			</div>
+  			<div className="container">
+    			<div className="mr-auto">
+      
+   				 </div>
+   					 {store.auth === true && (
+      				<div className="ml-auto">
+					<button onClick={() => handleLogout()} className="btn btn-primary">
+					Logout
+					</button>
+      		</div>
+    		)}
+ 				 </div>
 		</nav>
-	  );
+
+	);
 };

@@ -1,18 +1,19 @@
 import React, { useContext } from "react";
 import { Context } from "../store/appContext";
 import "../../styles/home.css";
-import LoginForm from "../component/login_form.jsx";
-import ErrorAlert from "../component/error.jsx";
+import Form from "../component/form";
+import { Navigate } from "react-router-dom"
 
 export const Home = () => {
-	const { store } = useContext(Context);
+	const { store, actions } = useContext(Context);
+	console.log("Se cargó home")
 
 	return (
-		<div className="container mx-auto mt-3">
-			<div className="row">
-				{store.login_error && <ErrorAlert error={store.login_error} />}
-				<LoginForm />
-			</div>
+		<div className="text-center mt-5">
+			<h1>Home!!</h1>
+			{ store.auth == true ? <Navigate to="/demo"/>: <Form />}
+			
+		
 		</div>
 	);
 };
